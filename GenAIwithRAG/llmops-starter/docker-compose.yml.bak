@@ -1,0 +1,46 @@
+services:
+  qdrant:
+    image: qdrant/qdrant:latest
+    ports: ["6333:6333"]
+    volumes:
+      - qdrant_storage:/qdrant/storage
+
+  mlflow:
+    image: ghcr.io/mlflow/mlflow:v2.16.0
+    command: mlflow server --host 0.0.0.0 --port 5000 --backend-store-uri sqlite:///mlflow.db --default-artifact-root /mlartifacts
+    ports: ["5000:5000"]
+    volumes:
+      - mlartifacts:/mlartifacts
+
+   llm:                               # <-- REMOVE/COMMENT THIS WHOLE SERVICE WHEN USING OLLAMA ON HOST
+     image: vllm/vllm-openai:latest
+     environment:
+       - VLLM_OPENAI_API_KEY=local-llm-key
+     command: >
+       --model meta-llama/Llama-3.1-8B-Instruct
+       --port 8001
+       --max-num-seqs 64
+       --gpu-memory-utilization 0.90
+     ports: ["8001:8001"]
+     deploy:
+      resources:
+         reservations:
+           devices:
+             - capabilities: ["gpu"]
+
+  api:
+    build: ./ 
+    ports: ["8000:8000"]
+    env_file: .env
+    volumes:
+      - ./:/app
+    depends_on:                # <-- only qdrant & mlflow now
+      - qdrant
+      - mlflow
+    extra_hosts:               # <-- lets the container reach your host
+      - "host.docker.internal:host-gateway"
+
+volumes:
+  qdrant_storage: {}
+  mlartifacts: {}
+

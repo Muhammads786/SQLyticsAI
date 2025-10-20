@@ -1,0 +1,43 @@
+services:
+  qdrant:
+    image: qdrant/qdrant:latest
+    ports: ["6333:6333"]
+    volumes:
+      - qdrant_storage:/qdrant/storage
+
+  mlflow:
+    image: ghcr.io/mlflow/mlflow:v2.16.0
+    command: mlflow server --host 0.0.0.0 --port 5000 --backend-store-uri sqlite:///mlflow.db --default-artifact-root /mlartifacts
+    ports: ["5000:5000"]
+    volumes:
+      - mlartifacts:/mlartifacts
+
+  # ✅ NEW: Ollama inside Docker (same network as API)
+  ollama:
+    image: ollama/ollama:latest
+    container_name: ollama
+    environment:
+      - OLLAMA_HOST=0.0.0.0
+      - OLLAMA_ORIGINS=*
+    volumes:
+      - ollama_data:/root/.ollama
+
+  api:
+    build: ./
+    ports: ["8000:8000"]
+    env_file: .env
+    volumes:
+      - ./:/app
+    depends_on:
+      - qdrant
+      - mlflow
+      - ollama               # ✅ depend on ollama now
+    # you can keep or remove this; not needed anymore:
+    # extra_hosts:
+    #   - "host.docker.internal:host-gateway"
+
+volumes:
+  qdrant_storage: {}
+  mlartifacts: {}
+  ollama_data: {}
+
