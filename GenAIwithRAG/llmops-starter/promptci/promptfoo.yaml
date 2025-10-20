@@ -1,0 +1,21 @@
+prompts:
+  - |
+    You are a helpful assistant. Cite sources.
+    Context:
+    {{context}}
+    Q: {{question}}
+    A:
+providers:
+  - id: openai:chat:custom
+    config:
+      baseURL: ${OPENAI_BASE_URL}
+      apiKey: ${OPENAI_API_KEY}
+      model: local
+
+tests:
+  - vars:
+      question: "What is this project about?"
+      context: "This project is a starter scaffold for LLMOps with FastAPI, Qdrant, vLLM/TGI, MLflow."
+    assert:
+      - type: contains
+        value: "scaffold"
